@@ -1,0 +1,17 @@
+node_modules
+dist
+.git
+.gitignore
+*.md
+tests
+coverage
+.security-cache
+.security-history
+security-reports
+*.log
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+
+

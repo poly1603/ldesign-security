@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  security-scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ldesign/security:latest
+    container_name: ldesign-security
+    volumes:
+      # 挂载要扫描的项目
+      - ./project:/workspace:ro
+      # 挂载输出目录
+      - ./security-reports:/reports
+      # 挂载缓存目录
+      - security-cache:/app/.security-cache
+    environment:
+      - NODE_ENV=production
+      - SCAN_DIR=/workspace
+      - REPORT_DIR=/reports
+    command: scan --dir /workspace
+    restart: unless-stopped
+
+  # 可选：Web监控面板
+  security-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ldesign/security:latest
+    container_name: ldesign-security-dashboard
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./project:/workspace:ro
+      - ./security-reports:/reports
+      - security-history:/app/.security-history
+    environment:
+      - NODE_ENV=production
+      - DASHBOARD_PORT=3000
+    command: ["node", "dist/web/dashboard.js"]
+    restart: unless-stopped
+
+volumes:
+  security-cache:
+    driver: local
+  security-history:
+    driver: local
+
+networks:
+  default:
+    name: security-network
+
+

@@ -1,7 +1,7 @@
 {
   "name": "@ldesign/security",
-  "version": "0.1.0",
-  "description": "LDesign 安全工具 - 依赖安全扫描、漏洞检测、代码审计",
+  "version": "2.0.0",
+  "description": "LDesign 企业级安全工具 - 全面的项目安全扫描、漏洞检测、代码审计和防护",
   "keywords": [
     "ldesign",
     "security",
@@ -50,16 +50,17 @@
     "dev": "tsup --watch",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "type-check": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "docs": "typedoc",
+    "docker:build": "docker build -t ldesign/security:latest .",
+    "docker:run": "docker-compose up"
   },
   "dependencies": {
     "@ldesign/kit": "workspace:*",
-    "audit-ci": "^6.6.1",
-    "snyk": "^1.1279.0",
-    "retire": "^5.0.0",
     "eslint": "^9.18.0",
     "chalk": "^5.3.0",
     "ora": "^8.0.1",
@@ -68,15 +69,19 @@
     "boxen": "^7.1.1",
     "execa": "^8.0.1",
     "fast-glob": "^3.3.2",
-    "fs-extra": "^11.2.0"
+    "fs-extra": "^11.2.0",
+    "pdfkit": "^0.15.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.16",
     "@types/fs-extra": "^11.0.4",
+    "@types/pdfkit": "^0.13.0",
+    "@vitest/coverage-v8": "^1.6.1",
     "typescript": "^5.7.3",
     "tsup": "^8.0.0",
     "vitest": "^1.6.1",
-    "rimraf": "^5.0.5"
+    "rimraf": "^5.0.5",
+    "typedoc": "^0.25.0"
   },
   "bin": {
     "ldesign-security": "./bin/cli.js",

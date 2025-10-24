@@ -1,0 +1,67 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # 每天UTC时间00:00执行
+    - cron: '0 0 * * *'
+
+jobs:
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      security-events: write # 上传SARIF所需
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security scan
+        run: npx @ldesign/security ci --fail-on high --sarif
+        continue-on-error: true
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: security-results.sarif
+
+      - name: Generate HTML report
+        if: always()
+        run: npx @ldesign/security report --format html
+
+      - name: Upload report artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-reports
+          path: security-reports/
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚨 Security scan found issues. Please review the security report.'
+            })
+
+

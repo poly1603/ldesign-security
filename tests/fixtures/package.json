@@ -1,0 +1,14 @@
+{
+  "name": "test-project",
+  "version": "1.0.0",
+  "description": "Test fixture for security scanner",
+  "dependencies": {
+    "lodash": "4.17.20",
+    "axios": "0.21.0"
+  },
+  "devDependencies": {
+    "eslint": "8.0.0"
+  }
+}
+
+

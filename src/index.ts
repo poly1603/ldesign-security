@@ -1,3 +1,12 @@
 export * from './core'
 export * from './types'
+export * from './reporters'
+export * from './errors/SecurityError'
+export * from './utils/logger'
+export * from './i18n'
+export * from './storage/scan-history'
+export * from './visualizers/dependency-graph'
+export * from './rules/rule-engine'
+export * from './plugins/plugin-manager'
+export * from './web/dashboard'
 

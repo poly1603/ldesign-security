@@ -6,14 +6,13 @@ import type { CodeIssue } from '../types'
  */
 export class CodeAuditor {
   private eslint: ESLint
-  
+
   constructor(private projectDir: string = process.cwd()) {
     this.eslint = new ESLint({
-      cwd: projectDir,
-      useEslintrc: true
+      cwd: projectDir
     })
   }
-  
+
   /**
    * 审计代码
    */
@@ -21,7 +20,7 @@ export class CodeAuditor {
     try {
       const results = await this.eslint.lintFiles(patterns)
       const issues: CodeIssue[] = []
-      
+
       for (const result of results) {
         for (const message of result.messages) {
           // 只关注安全相关的问题
@@ -37,14 +36,14 @@ export class CodeAuditor {
           }
         }
       }
-      
+
       return issues
     } catch (error) {
       console.warn('代码审计失败:', error)
       return []
     }
   }
-  
+
   /**
    * 判断是否为安全相关的规则
    */
@@ -57,7 +56,7 @@ export class CodeAuditor {
       'security/',
       '@typescript-eslint/no-implied-eval'
     ]
-    
+
     return securityRules.some(rule => ruleId.includes(rule))
   }
 }

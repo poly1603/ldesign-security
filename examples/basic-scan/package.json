@@ -1,0 +1,16 @@
+{
+  "name": "security-example-basic-scan",
+  "version": "1.0.0",
+  "description": "Basic security scan example",
+  "scripts": {
+    "scan": "lsec scan",
+    "check": "lsec check",
+    "fix": "lsec fix",
+    "report": "lsec report --format html,json"
+  },
+  "devDependencies": {
+    "@ldesign/security": "workspace:*"
+  }
+}
+
+
