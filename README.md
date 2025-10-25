@@ -15,7 +15,7 @@
 
 ### 🔍 多维度安全检测
 - **多源漏洞扫描** - 集成 NPM Audit、OSV，支持 CVE 查询和 CVSS 评分
-- **敏感信息检测** - 扫描硬编码的 API 密钥、密码、Token 等
+- **敏感信息检测** - 扫描硬编码的 API 密钥、密码、Token 等（支持大文件流式处理）
 - **注入攻击检测** - 检测 SQL、XSS、命令注入、SSRF 等漏洞
 - **代码安全审计** - 基于 ESLint 的代码安全规则检查
 - **许可证合规检查** - 检测许可证冲突和合规性问题
@@ -26,12 +26,25 @@
 - **JSON/YAML 报告** - 结构化数据，便于集成
 - **SARIF 报告** - 支持 GitHub Code Scanning
 - **SBOM 生成** - 生成 SPDX 和 CycloneDX 格式的软件物料清单
+- **性能报告** - 详细的性能指标和分析（新）
 
 ### 🛠️ 自动化和集成
 - **自动修复** - 一键修复已知漏洞
 - **CI/CD 集成** - 完美支持 GitHub Actions、GitLab CI 等
 - **通知告警** - 支持 Webhook、Slack、钉钉、企业微信
 - **策略管理** - 通过配置文件定义安全基线
+
+### ⚡ 性能优化（新）
+- **并发控制** - 智能的并发任务调度，避免资源耗尽
+- **流式处理** - 大文件（>5MB）自动使用流式处理，节省内存
+- **性能监控** - 实时监控各模块执行时间，识别性能瓶颈
+- **批处理支持** - 高效的批量数据处理
+
+### 🔧 开发体验（新）
+- **完善的文档** - 所有 API 都有详细的 JSDoc 注释和使用示例
+- **类型安全** - 完整的 TypeScript 类型定义，更好的 IDE 支持
+- **输入验证** - 严格的输入验证，提前发现配置错误
+- **结构化日志** - 分级日志系统，便于调试和监控
 
 ## 📦 安装
 
@@ -165,18 +178,29 @@ import { SecurityScanner } from '@ldesign/security'
 const scanner = new SecurityScanner({
   projectDir: './my-project',
   skipSecrets: false,
-  skipInjection: false
+  skipInjection: false,
+  maxConcurrency: 5,           // 新：控制并发数
+  includePerformance: true,    // 新：包含性能数据
+  enablePerformanceReport: true // 新：导出性能报告
 })
 
 const result = await scanner.scan()
 
 console.log('风险等级:', result.riskLevel)
 console.log('总问题数:', result.summary.totalIssues)
+console.log('扫描耗时:', result.duration, 'ms')
 console.log('漏洞:', result.vulnerabilities)
 console.log('敏感信息:', result.secrets)
 console.log('注入问题:', result.injectionIssues)
 console.log('许可证问题:', result.licenseIssues)
 console.log('供应链问题:', result.supplyChainIssues)
+
+// 新：性能分析
+if (result.performance) {
+  console.log('性能报告:', result.performance.summary)
+  const perfMonitor = scanner.getPerformanceMonitor()
+  console.log('最慢的操作:', perfMonitor.getSlowestOperations(5))
+}
 ```
 
 ### 多源漏洞检测
@@ -320,6 +344,112 @@ const notifier = new Notifier({
 })
 
 await notifier.notify(scanResult)
+```
+
+### 性能监控（新）
+
+```typescript
+import { PerformanceMonitor } from '@ldesign/security'
+
+const monitor = new PerformanceMonitor()
+
+// 方式 1：手动计时
+monitor.start('database_query')
+await db.query('SELECT * FROM users')
+const duration = monitor.end('database_query', { rows: 100 })
+
+// 方式 2：包装函数
+const result = await monitor.measure('fetch_users', async () => {
+  return await db.users.findMany()
+}, { limit: 100 })
+
+// 获取报告
+const report = monitor.getReport()
+console.log(`总耗时: ${report.total}ms`)
+
+// 找出最慢的操作
+const slowest = monitor.getSlowestOperations(5)
+slowest.forEach(op => {
+  console.log(`${op.operation}: ${op.duration}ms`)
+})
+
+// 导出性能数据
+await monitor.export('./performance.json')
+
+// 生成人类可读的摘要
+console.log(monitor.getSummaryText())
+```
+
+### 并行执行工具（新）
+
+```typescript
+import { ParallelExecutor } from '@ldesign/security'
+
+// 并发限制执行
+const fileTasks = files.map(file => () => fs.readFile(file))
+const contents = await ParallelExecutor.allWithLimit(fileTasks, 10)
+
+// 批处理
+const results = await ParallelExecutor.batch(
+  items,
+  50,
+  async (batch) => await processBatch(batch)
+)
+
+// 异步 map（限制并发）
+const processed = await ParallelExecutor.map(
+  items,
+  async (item) => await processItem(item),
+  5 // 最多同时处理 5 个
+)
+
+// 带重试机制
+const data = await ParallelExecutor.retry(
+  () => fetchFromAPI(),
+  {
+    maxRetries: 3,
+    initialDelay: 1000,
+    backoffMultiplier: 2
+  }
+)
+
+// 限时执行
+const result = await ParallelExecutor.timeout(
+  () => longRunningTask(),
+  5000,
+  '任务超时'
+)
+```
+
+### 输入验证（新）
+
+```typescript
+import { Validator } from '@ldesign/security'
+
+// 验证项目目录
+await Validator.validateProjectDir('./my-project')
+
+// 验证严重程度（带类型断言）
+const severity = 'high'
+Validator.validateSeverity(severity) // 之后 severity 确保是 Severity 类型
+
+// 验证报告格式
+Validator.validateReportFormat('html')
+
+// 验证 URL
+Validator.validateUrl('https://example.com')
+
+// 验证 cron 表达式
+Validator.validateCronExpression('0 0 * * *')
+
+// 验证文件路径
+await Validator.validateFilePath('./config.json')
+
+// 验证端口号
+Validator.validatePort(8080)
+
+// 验证邮箱
+Validator.validateEmail('user@example.com')
 ```
 
 ## ⚙️ 配置文件

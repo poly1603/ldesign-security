@@ -17,6 +17,14 @@ export interface ScanOptions {
   exclude?: string[]
   severity?: Severity
   failOn?: Severity
+  /** 严格模式：遇到错误抛出异常而不是静默失败 */
+  strictMode?: boolean
+  /** 最大并发数，用于控制并行扫描任务的数量 */
+  maxConcurrency?: number
+  /** 是否在扫描结果中包含性能数据 */
+  includePerformance?: boolean
+  /** 是否导出性能报告到文件 */
+  enablePerformanceReport?: boolean
 }
 
 // ==================== 漏洞相关 ====================

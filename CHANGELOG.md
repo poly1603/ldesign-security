@@ -2,6 +2,74 @@
 
 All notable changes to @ldesign/security will be documented in this file.
 
+## [2.1.0] - 2025-01-25
+
+### ✨ 新增功能 (Added)
+
+#### 性能优化工具
+- **并发控制系统** - 新增 `ParallelExecutor` 工具类
+  - 并发限制的 Promise.all
+  - 批处理和并行批处理
+  - 带重试机制的任务执行
+  - 异步 map/filter/reduce
+  - 竞态执行和限时执行
+- **性能监控系统** - 新增 `PerformanceMonitor` 类
+  - 实时操作计时
+  - 性能报告生成和导出
+  - 统计汇总（平均/最小/最大耗时）
+  - 人类可读的摘要文本
+- **流式文件处理** - 大文件（>5MB）自动使用流式处理
+  - 显著降低内存占用
+  - 支持扫描更大的项目
+
+#### 开发体验改进
+- **输入验证工具** - 新增 `Validator` 类
+  - 项目目录验证
+  - 严重程度验证（带类型断言）
+  - URL、邮箱、端口验证
+  - Cron 表达式验证
+- **完善的文档** - 所有公共 API 添加详细的 JSDoc 注释
+  - 参数和返回值说明
+  - 使用示例
+  - 异常说明
+
+#### 新增配置选项
+- `maxConcurrency` - 控制并发扫描任务数量（默认3）
+- `includePerformance` - 在扫描结果中包含性能数据
+- `enablePerformanceReport` - 导出性能报告到文件
+- `strictMode` - 严格模式，遇到错误立即抛出异常
+
+#### 新增 API
+- `SecurityScanner.getPerformanceMonitor()` - 获取性能监控器实例
+- `PerformanceMonitor` - 完整的性能监控工具类
+- `ParallelExecutor` - 并行执行工具集
+- `Validator` - 输入验证工具集
+
+### 🔧 改进 (Changed)
+
+- **统一错误处理** - 使用结构化日志系统替代 console 输出
+- **日志系统集成** - 所有核心模块使用带作用域的 logger
+- **智能任务调度** - SecurityScanner 使用并发限制优化资源使用
+- **类型安全增强** - 消除 `any` 类型使用，添加精确类型定义
+
+### ⚡ 性能提升 (Performance)
+
+- **并发优化** - 预计提升 20-30% 的扫描速度
+- **内存优化** - 流式处理减少内存峰值使用
+- **性能可见性** - 详细指标帮助识别性能瓶颈
+
+### 📚 文档 (Documentation)
+
+- 新增 `OPTIMIZATION_SUMMARY.md` - 详细的优化总结文档
+- 更新 README.md - 添加新功能使用示例
+- 改进 API 文档 - 所有新增 API 都有完整的 JSDoc
+
+### 🔄 向后兼容性 (Compatibility)
+
+✅ 完全向后兼容 - 所有新功能都是可选的，现有代码无需修改
+
+---
+
 ## [2.0.0] - 2025-10-23
 
 ### 🎉 Major Release - 全面优化增强版

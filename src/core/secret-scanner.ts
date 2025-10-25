@@ -1,12 +1,48 @@
 import fs from 'fs-extra'
 import path from 'path'
+import { createReadStream } from 'fs'
+import { createInterface } from 'readline'
 import fg from 'fast-glob'
 import type { SecretMatch } from '../types'
+import { logger } from '../utils/logger'
+import { ScanError } from '../errors/SecurityError'
 
 /**
  * 敏感信息扫描器 - 检测硬编码的密钥、密码等敏感信息
+ * 
+ * @description
+ * 该类负责扫描代码文件中可能泄露的敏感信息，包括：
+ * - API 密钥（AWS、GitHub、Google 等）
+ * - 密码和 Token
+ * - 私钥和证书
+ * - 数据库连接字符串
+ * - 个人信息（PII）
+ * 
+ * 支持多种文件格式，采用正则表达式匹配模式，并包含误报过滤机制。
+ * 对于大文件（>5MB）自动使用流式处理以优化内存使用。
+ * 
+ * @example
+ * ```typescript
+ * const scanner = new SecretScanner('./my-project')
+ * 
+ * // 扫描所有文件
+ * const secrets = await scanner.scan()
+ * 
+ * // 只扫描特定模式的文件
+ * const jsSecrets = await scanner.scan(['**\/*.js', '**\/*.ts'])
+ * 
+ * // 添加自定义检测模式
+ * scanner.addPattern({
+ *   name: 'Custom API Key',
+ *   type: 'api-key',
+ *   regex: /CUSTOM_API_[A-Z0-9]{32}/g,
+ *   severity: 'high'
+ * })
+ * ```
  */
 export class SecretScanner {
+  private logger = logger.child('SecretScanner')
+  private static readonly LARGE_FILE_THRESHOLD = 5 * 1024 * 1024 // 5MB
   private patterns: Array<{
     name: string
     type: SecretMatch['type']
@@ -115,10 +151,35 @@ export class SecretScanner {
       }
     ]
 
+  /**
+   * 创建敏感信息扫描器实例
+   * 
+   * @param {string} projectDir - 项目根目录路径，默认为当前工作目录
+   */
   constructor(private projectDir: string = process.cwd()) { }
 
   /**
    * 扫描敏感信息
+   * 
+   * @description
+   * 扫描项目中的代码文件，查找可能泄露的敏感信息。
+   * 自动排除 node_modules、dist、build 等目录。
+   * 支持自定义扫描模式。
+   * 
+   * @param {string[]} patterns - 可选的文件匹配模式数组
+   * @returns {Promise<SecretMatch[]>} 检测到的敏感信息列表
+   * 
+   * @example
+   * ```typescript
+   * const scanner = new SecretScanner('./my-project')
+   * const secrets = await scanner.scan()
+   * 
+   * secrets.forEach(secret => {
+   *   console.log(`${secret.file}:${secret.line}`)
+   *   console.log(`  类型: ${secret.type}`)
+   *   console.log(`  建议: ${secret.suggestion}`)
+   * })
+   * ```
    */
   async scan(patterns?: string[]): Promise<SecretMatch[]> {
     const secrets: SecretMatch[] = []
@@ -138,22 +199,113 @@ export class SecretScanner {
         dot: true
       })
 
+      this.logger.info(`扫描 ${files.length} 个文件以查找敏感信息...`)
+
       for (const file of files) {
         const fileSecrets = await this.scanFile(file)
         secrets.push(...fileSecrets)
       }
 
+      this.logger.info(`完成扫描，发现 ${secrets.length} 个敏感信息`)
       return secrets
     } catch (error) {
-      console.warn('敏感信息扫描失败:', error)
+      this.logger.error('敏感信息扫描失败', error as Error)
       return []
     }
   }
 
   /**
-   * 扫描单个文件
+   * 扫描单个文件（自动选择处理方式）
+   * 
+   * @description
+   * 根据文件大小自动选择处理方式：
+   * - 小文件（<5MB）：一次性读入内存处理
+   * - 大文件（>=5MB）：使用流式处理节省内存
+   * 
+   * @param {string} filePath - 文件路径
+   * @returns {Promise<SecretMatch[]>} 文件中检测到的敏感信息列表
+   * @private
    */
   private async scanFile(filePath: string): Promise<SecretMatch[]> {
+    try {
+      const stats = await fs.stat(filePath)
+
+      // 大文件使用流式处理
+      if (stats.size >= SecretScanner.LARGE_FILE_THRESHOLD) {
+        this.logger.debug(`使用流式处理大文件: ${filePath} (${(stats.size / 1024 / 1024).toFixed(2)}MB)`)
+        return this.scanFileStream(filePath)
+      } else {
+        return this.scanFileInMemory(filePath)
+      }
+    } catch (error) {
+      this.logger.warn(`扫描文件失败: ${filePath}`, error as Error)
+      return []
+    }
+  }
+
+  /**
+   * 使用流式处理扫描大文件
+   * 
+   * @description
+   * 逐行读取文件内容，避免大文件占用过多内存。
+   * 
+   * @param {string} filePath - 文件路径
+   * @returns {Promise<SecretMatch[]>} 检测到的敏感信息列表
+   * @private
+   */
+  private async scanFileStream(filePath: string): Promise<SecretMatch[]> {
+    const secrets: SecretMatch[] = []
+    const fileStream = createReadStream(filePath, { encoding: 'utf-8' })
+    const rl = createInterface({
+      input: fileStream,
+      crlfDelay: Infinity
+    })
+
+    let lineNumber = 0
+
+    for await (const line of rl) {
+      lineNumber++
+
+      for (const pattern of this.patterns) {
+        const matches = line.matchAll(pattern.regex)
+
+        for (const match of matches) {
+          // 跳过注释和测试文件中的示例
+          if (this.isLikelyFalsePositive(line, filePath)) {
+            continue
+          }
+
+          const column = match.index || 0
+          const matched = this.maskSecret(match[0])
+
+          secrets.push({
+            file: path.relative(this.projectDir, filePath),
+            line: lineNumber,
+            column: column + 1,
+            type: pattern.type,
+            matched,
+            pattern: pattern.name,
+            severity: pattern.severity,
+            suggestion: this.getSuggestion(pattern.type)
+          })
+        }
+      }
+    }
+
+    return secrets
+  }
+
+  /**
+   * 在内存中扫描文件
+   * 
+   * @description
+   * 一次性读入文件内容进行扫描，适用于小文件。
+   * 
+   * @param {string} filePath - 文件路径
+   * @returns {Promise<SecretMatch[]>} 检测到的敏感信息列表
+   * @private
+   */
+  private async scanFileInMemory(filePath: string): Promise<SecretMatch[]> {
     const secrets: SecretMatch[] = []
 
     try {
