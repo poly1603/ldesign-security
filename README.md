@@ -20,6 +20,8 @@
 - **代码安全审计** - 基于 ESLint 的代码安全规则检查
 - **许可证合规检查** - 检测许可证冲突和合规性问题
 - **供应链分析** - 检测 typosquatting、恶意包等供应链攻击
+- **加密安全检测** - 检测弱加密算法、硬编码密钥、不安全随机数、SSL/TLS 配置问题（新）
+- **API 安全检测** - 检测 API 端点暴露、认证问题、CORS 配置、Rate Limiting（新）
 
 ### 📊 强大的报告功能
 - **HTML 交互式报告** - 带图表和可视化的专业报告
@@ -29,7 +31,7 @@
 - **性能报告** - 详细的性能指标和分析（新）
 
 ### 🛠️ 自动化和集成
-- **自动修复** - 一键修复已知漏洞
+- **智能修复** - 智能依赖升级、自动修复漏洞、配置优化、支持回滚（增强）
 - **CI/CD 集成** - 完美支持 GitHub Actions、GitLab CI 等
 - **通知告警** - 支持 Webhook、Slack、钉钉、企业微信
 - **策略管理** - 通过配置文件定义安全基线
@@ -450,6 +452,100 @@ Validator.validatePort(8080)
 
 // 验证邮箱
 Validator.validateEmail('user@example.com')
+```
+
+### 加密安全检测（新）
+
+```typescript
+import { CryptoAnalyzer } from '@ldesign/security'
+
+const analyzer = new CryptoAnalyzer({
+  projectDir: './my-project',
+  checkWeakAlgorithms: true,
+  checkHardcodedKeys: true,
+  checkInsecureRandom: true,
+  checkSSLConfig: true
+})
+
+const issues = await analyzer.analyze()
+
+for (const issue of issues) {
+  console.log(`${issue.file}:${issue.line}`)
+  console.log(`  类型: ${issue.type}`)
+  console.log(`  问题: ${issue.message}`)
+  console.log(`  建议: ${issue.recommendation}`)
+  console.log(`  CWE: ${issue.cwe}`)
+}
+
+// 生成摘要报告
+const summary = analyzer.generateSummary(issues)
+console.log(`共发现 ${summary.total} 个加密安全问题`)
+console.log(`弱算法: ${summary.byType['weak-algorithm']}`)
+console.log(`硬编码密钥: ${summary.byType['hardcoded-key']}`)
+```
+
+### API 安全检测（新）
+
+```typescript
+import { APISecurityChecker } from '@ldesign/security'
+
+const checker = new APISecurityChecker({
+  projectDir: './my-api',
+  checkAuthentication: true,
+  checkCORS: true,
+  checkRateLimiting: true,
+  checkInputValidation: true
+})
+
+const issues = await checker.check()
+
+for (const issue of issues) {
+  console.log(`${issue.file}:${issue.line}`)
+  console.log(`  端点: ${issue.method?.toUpperCase()} ${issue.endpoint}`)
+  console.log(`  类型: ${issue.type}`)
+  console.log(`  问题: ${issue.message}`)
+  console.log(`  建议: ${issue.recommendation}`)
+}
+
+// 生成摘要报告
+const summary = checker.generateSummary(issues)
+console.log(`共发现 ${summary.total} 个 API 安全问题`)
+console.log(`关键端点:`, summary.criticalEndpoints)
+```
+
+### 智能修复（增强）
+
+```typescript
+import { SmartFixer } from '@ldesign/security'
+
+const fixer = new SmartFixer({
+  projectDir: './my-project',
+  autoBackup: true,
+  force: false,
+  dryRun: false  // 设为 true 可以预览修复而不实际执行
+})
+
+// 修复漏洞
+const result = await fixer.fixVulnerabilities(vulnerabilities)
+
+console.log(`修复成功: ${result.fixed.length}`)
+console.log(`修复失败: ${result.failed.length}`)
+console.log(`跳过: ${result.skipped.length}`)
+
+// 查看详细信息
+result.details.forEach(detail => {
+  console.log(`${detail.package}: ${detail.from} → ${detail.to}`)
+})
+
+// 如果需要回滚
+if (!result.success && result.backupPath) {
+  console.log(`回滚到备份: ${result.backupPath}`)
+  await fixer.rollback(result.backupPath)
+}
+
+// 智能升级所有过时依赖
+const upgradeResult = await fixer.smartUpgrade()
+console.log(`升级了 ${upgradeResult.fixed.length} 个包`)
 ```
 
 ## ⚙️ 配置文件

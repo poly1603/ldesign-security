@@ -7,7 +7,9 @@ import { logger } from '../utils/logger'
  * Web监控面板API（简化版本）
  * 完整版本应使用 Express/Fastify + WebSocket
  */
-export class SecurityDashboard {
+export { InteractiveDashboard, DashboardConfig } from './interactive-dashboard'
+
+export class Dashboard
   private history: ScanHistory
   private scanner: SecurityScanner
 

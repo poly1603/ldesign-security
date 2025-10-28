@@ -471,6 +471,153 @@ program
     }
   })
 
+// ==================== WATCH 命令 ====================
+program
+  .command('watch')
+  .description('启动持续监控模式（文件监听 + Git Hooks）')
+  .option('-d, --dir <directory>', '项目目录', process.cwd())
+  .option('--no-hooks', '不安装 Git Hooks')
+  .option('--no-watch', '不启用文件监听')
+  .option('--interval <ms>', '扫描间隔（毫秒）', '300000')
+  .action(async (options) => {
+    const { ContinuousMonitor } = await import('../monitors/continuous-monitor')
+    
+    console.log(chalk.blue.bold('\n👁️  启动持续监控模式\n'))
+
+    const monitor = new ContinuousMonitor(options.dir, {
+      watchFiles: options.watch !== false,
+      installGitHooks: options.hooks !== false,
+      scanInterval: parseInt(options.interval),
+      alerts: {
+        enabled: true,
+        severityThreshold: 'medium'
+      }
+    })
+
+    await monitor.start()
+
+    console.log(chalk.green('✓ 持续监控已启动'))
+    console.log(chalk.gray('  按 Ctrl+C 停止监控\n'))
+
+    process.on('SIGINT', async () => {
+      await monitor.stop()
+      process.exit(0)
+    })
+  })
+
+// ==================== DASHBOARD 命令 ====================
+program
+  .command('dashboard')
+  .description('启动交互式安全仪表板')
+  .option('-d, --dir <directory>', '项目目录', process.cwd())
+  .option('-p, --port <port>', '端口号', '3000')
+  .option('--host <host>', '主机地址', 'localhost')
+  .action(async (options) => {
+    const { InteractiveDashboard } = await import('../web/interactive-dashboard')
+    
+    console.log(chalk.blue.bold('\n🎯 启动安全仪表板...\n'))
+
+    const dashboard = new InteractiveDashboard(options.dir, {
+      port: parseInt(options.port),
+      host: options.host,
+      enableWebSocket: true,
+      autoRefresh: true
+    })
+
+    await dashboard.start()
+    console.log(chalk.green(`\n✓ Dashboard 已启动: http://${options.host}:${options.port}`))
+    console.log(chalk.gray('  按 Ctrl+C 停止服务\n'))
+
+    process.on('SIGINT', async () => {
+      await dashboard.stop()
+      process.exit(0)
+    })
+  })
+
+// ==================== COMPARE 命令 ====================
+program
+  .command('compare')
+  .description('比较两次扫描结果')
+  .option('--base <version>', '基准版本/分支/标签')
+  .option('--target <version>', '目标版本/分支/标签', 'HEAD')
+  .option('-o, --output <file>', '输出文件')
+  .action(async (options) => {
+    const { ComparisonReporter } = await import('../reporters/comparison-reporter')
+    const spinner = ora('正在比较扫描结果...').start()
+
+    try {
+      const reporter = new ComparisonReporter()
+      const report = await reporter.compareVersions(
+        process.cwd(),
+        options.base,
+        options.target
+      )
+
+      spinner.stop()
+
+      console.log(chalk.bold('\n📊 对比结果:\n'))
+      console.log(`  基准: ${options.base || '上一次扫描'}`)
+      console.log(`  目标: ${options.target}`)
+      console.log(`\n  新增漏洞: ${chalk.red(report.changes.added)}`)
+      console.log(`  修复漏洞: ${chalk.green(report.changes.removed)}`)
+      console.log(`  未变化: ${report.changes.unchanged}\n`)
+
+      if (options.output) {
+        await fs.writeFile(options.output, report.html, 'utf-8')
+        console.log(chalk.green(`✓ 对比报告已保存: ${options.output}\n`))
+      }
+    } catch (error) {
+      spinner.fail(chalk.red('对比失败'))
+      console.error(error)
+      process.exit(1)
+    }
+  })
+
+// ==================== COMPLIANCE 命令 ====================
+program
+  .command('compliance')
+  .description('检查安全合规性（OWASP, PCI DSS, GDPR等）')
+  .option('-d, --dir <directory>', '项目目录', process.cwd())
+  .option('-s, --standard <standard>', '合规标准 (owasp|cis|pci|gdpr|soc2)', 'owasp')
+  .option('-o, --output <file>', '输出文件')
+  .action(async (options) => {
+    const { ComplianceChecker } = await import('../compliance/compliance-checker')
+    const spinner = ora('正在检查合规性...').start()
+
+    try {
+      const checker = new ComplianceChecker(options.dir)
+      const result = await checker.check([options.standard])
+      
+      spinner.stop()
+
+      console.log(chalk.bold('\n🏛️  合规检查结果:\n'))
+      console.log(`  标准: ${options.standard.toUpperCase()}`)
+      console.log(`  得分: ${chalk.bold(result.score.toFixed(1))}/100`)
+      console.log(`  通过: ${chalk.green(result.passed)}/${result.total}\n`)
+
+      if (result.failed > 0) {
+        console.log(chalk.red.bold('  失败检查:'))
+        result.results
+          .filter(r => r.status === 'failed')
+          .slice(0, 5)
+          .forEach(r => {
+            console.log(`    ❌ ${r.title}`)
+            console.log(`       ${r.description}`)
+          })
+      }
+
+      if (options.output) {
+        const report = checker.generateReport(result)
+        await fs.writeFile(options.output, report.html, 'utf-8')
+        console.log(chalk.green(`\n✓ 合规报告已保存: ${options.output}\n`))
+      }
+    } catch (error) {
+      spinner.fail(chalk.red('合规检查失败'))
+      console.error(error)
+      process.exit(1)
+    }
+  })
+
 // ==================== CI 命令 ====================
 program
   .command('ci')

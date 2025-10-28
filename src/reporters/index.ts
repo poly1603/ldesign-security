@@ -6,3 +6,15 @@ export { PDFReporter } from './pdf-reporter'
 export { MarkdownReporter } from './markdown-reporter'
 export { ExcelReporter } from './excel-reporter'
 
+// 新增：对比报告生成器
+export { ComparisonReporter } from './comparison-reporter'
+export type { 
+  ComparisonResult,
+  ComparisonType,
+  ComparisonSnapshot,
+  ComparisonChanges,
+  ComparisonSummary,
+  ChangeDetail,
+  ComparisonReporterOptions
+} from './comparison-reporter'
+

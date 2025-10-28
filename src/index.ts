@@ -9,4 +9,6 @@ export * from './visualizers/dependency-graph'
 export * from './rules/rule-engine'
 export * from './plugins/plugin-manager'
 export * from './web/dashboard'
+export * from './integrations'
+export * from './monitors'
 

@@ -1,5 +1,5 @@
 {
-  "name": "test-project",
+  "name": "security-test-project",
   "version": "1.0.0",
   "description": "Test fixture for security scanner",
   "dependencies": {

@@ -317,3 +317,44 @@ export interface SecurityScanResult {
   }
 }
 
+// ==================== 持续监控相关 ====================
+
+export interface MonitorConfig {
+  watchPaths?: string[]
+  ignorePatterns?: string[]
+  scanInterval?: number
+  watchFiles?: boolean
+  installGitHooks?: boolean
+  gitHooks?: Array<'pre-commit' | 'pre-push' | 'commit-msg'>
+  alerts?: {
+    enabled: boolean
+    severityThreshold?: 'low' | 'medium' | 'high' | 'critical'
+    webhookUrl?: string
+    slackWebhook?: string
+    dingtalkWebhook?: string
+    wecomWebhook?: string
+  }
+  scanOptions?: Partial<ScanOptions>
+  autoFix?: boolean
+  incrementalScan?: boolean
+}
+
+export interface MonitorStats {
+  totalScans: number
+  filesWatched: number
+  alertsSent: number
+  lastScanDuration: number
+  averageScanDuration: number
+  isRunning?: boolean
+  lastScanTime?: Date
+  watchersActive?: number
+}
+
+export interface MonitorEvent {
+  type: 'started' | 'stopped' | 'scan-started' | 'scan-completed' | 'scan-failed' | 
+        'file-changed' | 'alert-sent' | 'hooks-installed' | 'auto-fix-started' | 
+        'auto-fix-completed' | 'auto-fix-failed'
+  timestamp: Date
+  data?: any
+}
+

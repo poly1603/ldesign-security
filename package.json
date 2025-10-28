@@ -1,7 +1,7 @@
 {
   "name": "@ldesign/security",
-  "version": "2.0.0",
-  "description": "LDesign 企业级安全工具 - 全面的项目安全扫描、漏洞检测、代码审计和防护",
+  "version": "2.3.0",
+  "description": "LDesign 企业级安全工具 - 全面的项目安全扫描、漏洞检测、代码审计、合规检查和容器安全",
   "keywords": [
     "ldesign",
     "security",
